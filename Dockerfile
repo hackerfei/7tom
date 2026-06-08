@@ -20,6 +20,9 @@ FROM ${NODE_IMAGE} AS frontend-builder
 
 WORKDIR /app/frontend
 
+# Frontend type-checking and bundling can exceed Node's default heap in Docker.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 # Install pnpm (pinned to v9 to match CI and keep builds reproducible)
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
