@@ -14,12 +14,22 @@ const (
 	BillingModeToken      BillingMode = "token"       // 按 token 区间计费
 	BillingModePerRequest BillingMode = "per_request" // 按次计费（支持上下文窗口分层）
 	BillingModeImage      BillingMode = "image"       // 图片计费（当前按次，预留 token 计费）
+	BillingModeVideo      BillingMode = "video"       // 视频生成计费（按视频生成次数）
 )
 
 // IsValid 检查 BillingMode 是否为合法值
 func (m BillingMode) IsValid() bool {
 	switch m {
 	case BillingModeToken, BillingModePerRequest, BillingModeImage, "":
+		return true
+	}
+	return false
+}
+
+// IsValidUsageFilter 检查 BillingMode 是否可用于使用记录筛选。
+func (m BillingMode) IsValidUsageFilter() bool {
+	switch m {
+	case BillingModeToken, BillingModePerRequest, BillingModeImage, BillingModeVideo, "":
 		return true
 	}
 	return false
@@ -82,6 +92,7 @@ type ChannelModelPricing struct {
 	OutputPrice      *float64          // 每 token 输出价格（USD）
 	CacheWritePrice  *float64          // 缓存写入价格
 	CacheReadPrice   *float64          // 缓存读取价格
+	ImageInputPrice  *float64          // 图片输入 token 价格（如 gpt-image-2 图片编辑）；未配置时回退文本输入价
 	ImageOutputPrice *float64          // 图片输出价格（向后兼容）
 	PerRequestPrice  *float64          // 默认按次计费价格（USD）
 	Intervals        []PricingInterval // 区间定价列表
@@ -248,16 +259,14 @@ func (c *Channel) IsWebSearchEmulationEnabled(platform string) bool {
 	return ok && enabled
 }
 
-// IsBedrockCCCompatEnabled 返回该渠道是否为指定平台启用了 Bedrock CC 兼容模式。
+// IsBedrockCCCompatEnabled 返回该渠道是否启用了 Bedrock CC 兼容模式。
+// 一旦启用，该渠道下所有请求都会应用 CC 兼容转换，不区分账号 platform。
 func (c *Channel) IsBedrockCCCompatEnabled(platform string) bool {
 	if c == nil || c.FeaturesConfig == nil {
 		return false
 	}
-	bcc, ok := c.FeaturesConfig[featureKeyBedrockCCCompat].(map[string]any)
-	if !ok {
-		return false
-	}
-	enabled, ok := bcc[platform].(bool)
+	// 直接检查 bedrock_cc_compat 开关，不再检查 platform 子字段
+	enabled, ok := c.FeaturesConfig[featureKeyBedrockCCCompat].(bool)
 	return ok && enabled
 }
 

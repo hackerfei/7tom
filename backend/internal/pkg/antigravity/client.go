@@ -17,6 +17,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/proxyurl"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/proxyutil"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/servertiming"
 )
 
 // ForbiddenError 表示上游返回 403 Forbidden
@@ -279,7 +280,6 @@ func NewClient(proxyURL string) (*Client, error) {
 		}
 		client.Transport = transport
 	}
-
 	return &Client{
 		httpClient: client,
 	}, nil
@@ -322,17 +322,13 @@ func shouldFallbackToNextURL(err error, statusCode int) bool {
 
 // ExchangeCode 用 authorization code 交换 token
 func (c *Client) ExchangeCode(ctx context.Context, code, codeVerifier string) (*TokenResponse, error) {
-	clientID, err := GetClientID()
-	if err != nil {
-		return nil, err
-	}
 	clientSecret, err := getClientSecret()
 	if err != nil {
 		return nil, err
 	}
 
 	params := url.Values{}
-	params.Set("client_id", clientID)
+	params.Set("client_id", ClientID)
 	params.Set("client_secret", clientSecret)
 	params.Set("code", code)
 	params.Set("redirect_uri", RedirectURI)
@@ -345,7 +341,7 @@ func (c *Client) ExchangeCode(ctx context.Context, code, codeVerifier string) (*
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := servertiming.Do(c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("token 交换请求失败: %w", err)
 	}
@@ -370,17 +366,13 @@ func (c *Client) ExchangeCode(ctx context.Context, code, codeVerifier string) (*
 
 // RefreshToken 刷新 access_token
 func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*TokenResponse, error) {
-	clientID, err := GetClientID()
-	if err != nil {
-		return nil, err
-	}
 	clientSecret, err := getClientSecret()
 	if err != nil {
 		return nil, err
 	}
 
 	params := url.Values{}
-	params.Set("client_id", clientID)
+	params.Set("client_id", ClientID)
 	params.Set("client_secret", clientSecret)
 	params.Set("refresh_token", refreshToken)
 	params.Set("grant_type", "refresh_token")
@@ -391,7 +383,7 @@ func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*TokenR
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := servertiming.Do(c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("token 刷新请求失败: %w", err)
 	}
@@ -422,7 +414,7 @@ func (c *Client) GetUserInfo(ctx context.Context, accessToken string) (*UserInfo
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := servertiming.Do(c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("用户信息请求失败: %w", err)
 	}
@@ -473,7 +465,7 @@ func (c *Client) LoadCodeAssist(ctx context.Context, accessToken string) (*LoadC
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", GetUserAgentForContext(ctx))
 
-		resp, err := c.httpClient.Do(req)
+		resp, err := servertiming.Do(c.httpClient, req)
 		if err != nil {
 			lastErr = fmt.Errorf("loadCodeAssist 请求失败: %w", err)
 			if shouldFallbackToNextURL(err, 0) && urlIdx < len(availableURLs)-1 {
@@ -552,7 +544,7 @@ func (c *Client) OnboardUser(ctx context.Context, accessToken, tierID string) (s
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("User-Agent", GetUserAgentForContext(ctx))
 
-			resp, err := c.httpClient.Do(req)
+			resp, err := servertiming.Do(c.httpClient, req)
 			if err != nil {
 				lastErr = fmt.Errorf("onboardUser 请求失败: %w", err)
 				if shouldFallbackToNextURL(err, 0) && urlIdx < len(availableURLs)-1 {
@@ -593,7 +585,7 @@ func (c *Client) OnboardUser(ctx context.Context, accessToken, tierID string) (s
 				return "", lastErr
 			}
 
-			// done=false 时等待后重试（与 CLIProxyAPI 行为一致）
+			// done=false 时等待后重试，避免在上游仍未完成时提前结束轮询。
 			select {
 			case <-time.After(2 * time.Second):
 			case <-ctx.Done():
@@ -691,7 +683,7 @@ func (c *Client) FetchAvailableModels(ctx context.Context, accessToken, projectI
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", GetUserAgentForContext(ctx))
 
-		resp, err := fetchClient.Do(req)
+		resp, err := servertiming.Do(fetchClient, req)
 		if err != nil {
 			lastErr = fmt.Errorf("fetchAvailableModels 请求失败: %w", err)
 			if shouldFallbackToNextURL(err, 0) && urlIdx < len(availableURLs)-1 {
@@ -850,7 +842,7 @@ func (c *Client) SetUserSettings(ctx context.Context, accessToken string) (*SetU
 	req.Header.Set("X-Goog-Api-Client", "gl-node/22.21.1")
 	req.Host = "daily-cloudcode-pa.googleapis.com"
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := servertiming.Do(c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("setUserSettings 请求失败: %w", err)
 	}
@@ -893,7 +885,7 @@ func (c *Client) FetchUserInfo(ctx context.Context, accessToken, projectID strin
 	req.Header.Set("X-Goog-Api-Client", "gl-node/22.21.1")
 	req.Host = "daily-cloudcode-pa.googleapis.com"
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := servertiming.Do(c.httpClient, req)
 	if err != nil {
 		return nil, fmt.Errorf("fetchUserInfo 请求失败: %w", err)
 	}

@@ -611,7 +611,7 @@ func TestBuildAuthorizationURL_参数验证(t *testing.T) {
 	params := parsed.Query()
 
 	expectedParams := map[string]string{
-		"client_id":              testAntigravityClientID,
+		"client_id":              ClientID,
 		"redirect_uri":           RedirectURI,
 		"response_type":          "code",
 		"scope":                  Scopes,
@@ -668,12 +668,12 @@ func TestBuildAuthorizationURL_特殊字符编码(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestConstants_值正确(t *testing.T) {
-	oldClientID := defaultClientID
+	oldClientID := ClientID
 	oldSecret := defaultClientSecret
-	defaultClientID = "test-antigravity-client-id"
+	ClientID = "test-antigravity-client-id"
 	defaultClientSecret = "test-antigravity-client-secret"
 	t.Cleanup(func() {
-		defaultClientID = oldClientID
+		ClientID = oldClientID
 		defaultClientSecret = oldSecret
 	})
 
@@ -686,12 +686,12 @@ func TestConstants_值正确(t *testing.T) {
 	if UserInfoURL != "https://www.googleapis.com/oauth2/v2/userinfo" {
 		t.Errorf("UserInfoURL 不匹配: got %s", UserInfoURL)
 	}
-	if clientID, err := GetClientID(); err != nil || clientID != "test-antigravity-client-id" {
-		t.Errorf("testAntigravityClientID 不匹配: got %s err=%v", clientID, err)
+	if ClientID != "test-antigravity-client-id" {
+		t.Errorf("ClientID 不匹配: got %s", ClientID)
 	}
 	secret, err := getClientSecret()
 	if err != nil {
-		t.Fatalf("getClientSecret 应返回默认值，但报错: %v", err)
+		t.Fatalf("getClientSecret 应返回测试值，但报错: %v", err)
 	}
 	if secret != "test-antigravity-client-secret" {
 		t.Errorf("默认 client_secret 不匹配: got %s", secret)

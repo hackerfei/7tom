@@ -63,20 +63,20 @@ var userAgentVersionPattern = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 type UserAgentVersionResolver func(ctx context.Context) string
 
 var (
-	// defaultClientID/defaultClientSecret 可通过环境变量配置。
-	defaultClientID = ""
+	// ClientID 可通过环境变量 ANTIGRAVITY_OAUTH_CLIENT_ID 配置。
+	ClientID = ""
 	// defaultUserAgentVersion 可通过环境变量 ANTIGRAVITY_USER_AGENT_VERSION 配置。
 	defaultUserAgentVersion  = DefaultUserAgentVersion
 	userAgentVersionMu       sync.RWMutex
 	userAgentVersionResolver UserAgentVersionResolver
 )
 
-// defaultClientSecret 可通过环境变量 ANTIGRAVITY_OAUTH_CLIENT_SECRET 配置。
+// defaultClientSecret 可通过环境变量 ANTIGRAVITY_OAUTH_CLIENT_SECRET 配置
 var defaultClientSecret = ""
 
 func init() {
 	if clientID := strings.TrimSpace(os.Getenv(AntigravityOAuthClientIDEnv)); clientID != "" {
-		defaultClientID = clientID
+		ClientID = clientID
 	}
 	// 从环境变量读取版本号，未设置则使用默认值
 	if version := NormalizeUserAgentVersion(os.Getenv(AntigravityUserAgentVersionEnv)); version != "" {
@@ -148,13 +148,6 @@ func getClientSecret() (string, error) {
 		return v, nil
 	}
 	return "", infraerrors.Newf(http.StatusBadRequest, "ANTIGRAVITY_OAUTH_CLIENT_SECRET_MISSING", "missing antigravity oauth client_secret; set %s", AntigravityOAuthClientSecretEnv)
-}
-
-func GetClientID() (string, error) {
-	if v := strings.TrimSpace(defaultClientID); v != "" {
-		return v, nil
-	}
-	return "", infraerrors.Newf(http.StatusBadRequest, "ANTIGRAVITY_OAUTH_CLIENT_ID_MISSING", "missing antigravity oauth client_id; set %s", AntigravityOAuthClientIDEnv)
 }
 
 // BaseURLs 定义 Antigravity API 端点（与 Antigravity-Manager 保持一致）
@@ -407,11 +400,7 @@ func base64URLEncode(data []byte) string {
 // BuildAuthorizationURL 构建 Google OAuth 授权 URL
 func BuildAuthorizationURL(state, codeChallenge string) string {
 	params := url.Values{}
-	clientID, err := GetClientID()
-	if err != nil {
-		clientID = ""
-	}
-	params.Set("client_id", clientID)
+	params.Set("client_id", ClientID)
 	params.Set("redirect_uri", RedirectURI)
 	params.Set("response_type", "code")
 	params.Set("scope", Scopes)

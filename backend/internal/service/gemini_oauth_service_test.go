@@ -23,7 +23,7 @@ func TestGeminiOAuthService_GenerateAuthURL_RedirectURIStrategy(t *testing.T) {
 	// NOTE: This test sets process env; it must not run in parallel.
 	// The built-in Gemini CLI client secret is not embedded in this repository.
 	// Tests set a dummy secret via env to simulate operator-provided configuration.
-	t.Setenv(geminicli.GeminiCLIOAuthClientIDEnv, "test-built-in-client-id")
+	t.Setenv(geminicli.GeminiCLIOAuthClientIDEnv, "test-gemini-cli-client-id")
 	t.Setenv(geminicli.GeminiCLIOAuthClientSecretEnv, "test-built-in-secret")
 
 	type testCase struct {
@@ -47,7 +47,7 @@ func TestGeminiOAuthService_GenerateAuthURL_RedirectURIStrategy(t *testing.T) {
 				},
 			},
 			oauthType:     "google_one",
-			wantClientID:  geminicli.GeminiCLIOAuthClientID(),
+			wantClientID:  "test-gemini-cli-client-id",
 			wantRedirect:  geminicli.GeminiCLIRedirectURI,
 			wantScope:     geminicli.DefaultCodeAssistScopes,
 			wantProjectID: "",
@@ -63,7 +63,7 @@ func TestGeminiOAuthService_GenerateAuthURL_RedirectURIStrategy(t *testing.T) {
 				},
 			},
 			oauthType:     "google_one",
-			wantClientID:  geminicli.GeminiCLIOAuthClientID(),
+			wantClientID:  "test-gemini-cli-client-id",
 			wantRedirect:  geminicli.GeminiCLIRedirectURI,
 			wantScope:     geminicli.DefaultCodeAssistScopes,
 			wantProjectID: "",
@@ -80,7 +80,7 @@ func TestGeminiOAuthService_GenerateAuthURL_RedirectURIStrategy(t *testing.T) {
 			},
 			oauthType:     "code_assist",
 			projectID:     "my-gcp-project",
-			wantClientID:  geminicli.GeminiCLIOAuthClientID(),
+			wantClientID:  "test-gemini-cli-client-id",
 			wantRedirect:  geminicli.GeminiCLIRedirectURI,
 			wantScope:     geminicli.DefaultCodeAssistScopes,
 			wantProjectID: "my-gcp-project",
@@ -639,7 +639,7 @@ func TestGeminiOAuthService_GetOAuthConfig(t *testing.T) {
 			cfg: &config.Config{
 				Gemini: config.GeminiConfig{
 					OAuth: config.GeminiOAuthConfig{
-						ClientID:     geminicli.GeminiCLIOAuthClientID(),
+						ClientID:     geminicli.GeminiCLIOAuthClientID,
 						ClientSecret: "some-secret",
 					},
 				},
@@ -804,6 +804,18 @@ func (m *mockGeminiProxyRepo) CountAccountsByProxyID(ctx context.Context, proxyI
 	panic("not impl")
 }
 func (m *mockGeminiProxyRepo) ListAccountSummariesByProxyID(ctx context.Context, proxyID int64) ([]ProxyAccountSummary, error) {
+	panic("not impl")
+}
+func (m *mockGeminiProxyRepo) SweepExpiredProxies(ctx context.Context, now time.Time) (int64, error) {
+	panic("not impl")
+}
+func (m *mockGeminiProxyRepo) ListAllForFallback(ctx context.Context) ([]Proxy, error) {
+	panic("not impl")
+}
+func (m *mockGeminiProxyRepo) CountExpired(ctx context.Context) (int64, error) {
+	panic("not impl")
+}
+func (m *mockGeminiProxyRepo) CountExpiringSoon(ctx context.Context, now time.Time) (int64, error) {
 	panic("not impl")
 }
 

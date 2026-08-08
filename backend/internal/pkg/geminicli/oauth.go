@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -146,6 +147,23 @@ func base64URLEncode(data []byte) string {
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(data), "=")
 }
 
+func builtinGeminiCLIOAuthClientID() string {
+	if v := strings.TrimSpace(GeminiCLIOAuthClientID); v != "" {
+		return v
+	}
+	return strings.TrimSpace(os.Getenv(GeminiCLIOAuthClientIDEnv))
+}
+
+func builtinGeminiCLIOAuthClientSecret() string {
+	if v := strings.TrimSpace(GeminiCLIOAuthClientSecret); v != "" {
+		return v
+	}
+	if v, ok := os.LookupEnv(GeminiCLIOAuthClientSecretEnv); ok {
+		return strings.TrimSpace(v)
+	}
+	return ""
+}
+
 // EffectiveOAuthConfig returns the effective OAuth configuration.
 // oauthType: "code_assist" or "ai_studio" (defaults to "code_assist" if empty).
 //
@@ -169,8 +187,8 @@ func EffectiveOAuthConfig(cfg OAuthConfig, oauthType string) (OAuthConfig, error
 	// Fall back to built-in Gemini CLI OAuth client when not configured.
 	// SECURITY: This repo does not embed the built-in client secret; it must be provided via env.
 	if effective.ClientID == "" && effective.ClientSecret == "" {
-		clientID := strings.TrimSpace(GeminiCLIOAuthClientID())
-		secret := strings.TrimSpace(GeminiCLIOAuthClientSecret())
+		clientID := builtinGeminiCLIOAuthClientID()
+		secret := builtinGeminiCLIOAuthClientSecret()
 		if clientID == "" {
 			return OAuthConfig{}, infraerrors.Newf(http.StatusBadRequest, "GEMINI_CLI_OAUTH_CLIENT_ID_MISSING", "built-in Gemini CLI OAuth client_id is not configured; set %s or provide a custom OAuth client", GeminiCLIOAuthClientIDEnv)
 		}
@@ -183,7 +201,7 @@ func EffectiveOAuthConfig(cfg OAuthConfig, oauthType string) (OAuthConfig, error
 		return OAuthConfig{}, infraerrors.New(http.StatusBadRequest, "GEMINI_OAUTH_CLIENT_NOT_CONFIGURED", "OAuth client not configured: please set both client_id and client_secret (or leave both empty to use the built-in Gemini CLI client)")
 	}
 
-	isBuiltinClient := effective.ClientID == strings.TrimSpace(GeminiCLIOAuthClientID())
+	isBuiltinClient := builtinGeminiCLIOAuthClientID() != "" && effective.ClientID == builtinGeminiCLIOAuthClientID()
 
 	if effective.Scopes == "" {
 		// Use different default scopes based on OAuth type

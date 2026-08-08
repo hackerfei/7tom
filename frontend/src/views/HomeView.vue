@@ -1,6 +1,6 @@
 <template>
   <!-- Custom Home Content: Full Page Mode -->
-  <div v-if="homeContent" class="min-h-screen">
+  <div v-if="hasHomeContent" class="min-h-screen">
     <!-- iframe mode -->
     <iframe
       v-if="isHomeContentUrl"
@@ -10,6 +10,75 @@
     ></iframe>
     <!-- HTML mode - SECURITY: homeContent is admin-only setting, XSS risk is acceptable -->
     <div v-else v-html="homeContent"></div>
+  </div>
+
+  <!-- Compact Home Page -->
+  <div
+    v-else-if="compactHomeEnabled"
+    data-testid="compact-home"
+    class="flex min-h-screen flex-col bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white"
+  >
+    <header class="border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-dark-800">
+      <nav class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 sm:gap-4">
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+          <img
+            :src="siteLogo || '/logo.svg'"
+            alt="Logo"
+            class="h-9 w-9 shrink-0 rounded-lg object-contain"
+          />
+          <span class="min-w-0 truncate text-base font-semibold">{{ siteName }}</span>
+        </div>
+        <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+          <LocaleSwitcher />
+          <a
+            v-if="docUrl"
+            :href="docUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-dark-400 dark:hover:bg-dark-800"
+            :title="t('home.viewDocs')"
+          >
+            <Icon name="book" size="md" />
+          </a>
+          <button
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-dark-400 dark:hover:bg-dark-800"
+            :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
+            @click="toggleTheme"
+          >
+            <Icon v-if="isDark" name="sun" size="md" />
+            <Icon v-else name="moon" size="md" />
+          </button>
+          <router-link
+            :to="isAuthenticated ? dashboardPath : '/login'"
+            class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+          >
+            {{ isAuthenticated ? t('home.dashboard') : t('home.login') }}
+          </router-link>
+        </div>
+      </nav>
+    </header>
+
+    <main class="flex min-w-0 flex-1 items-center justify-center px-4 py-16 sm:px-6">
+      <div class="min-w-0 max-w-2xl text-center">
+        <img
+          :src="siteLogo || '/logo.svg'"
+          alt="Logo"
+          class="mx-auto mb-6 h-20 w-20 rounded-2xl object-contain"
+        />
+        <h1 class="[overflow-wrap:anywhere] text-3xl font-bold md:text-4xl">{{ siteName }}</h1>
+        <p class="mt-4 whitespace-pre-wrap [overflow-wrap:anywhere] text-base text-gray-600 dark:text-dark-300">{{ siteSubtitle }}</p>
+        <router-link
+          :to="isAuthenticated ? dashboardPath : '/login'"
+          class="mt-8 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-700"
+        >
+          {{ isAuthenticated ? t('home.goToDashboard') : t('home.login') }}
+        </router-link>
+      </div>
+    </main>
+
+    <footer class="min-w-0 border-t border-gray-200 px-4 py-5 text-center text-sm text-gray-500 [overflow-wrap:anywhere] sm:px-6 dark:border-dark-800 dark:text-dark-400">
+      &copy; {{ currentYear }} {{ siteName }}
+    </footer>
   </div>
 
   <!-- Default Home Page -->
@@ -32,7 +101,7 @@
         class="absolute bottom-1/4 right-1/4 h-64 w-64 rounded-full bg-primary-400/10 blur-3xl"
       ></div>
       <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.04)_1px,transparent_1px)] bg-[size:64px_64px]"
+        class="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"
       ></div>
     </div>
 
@@ -40,11 +109,10 @@
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
         <!-- Logo -->
-        <div class="flex items-center gap-2.5">
-          <div class="h-10 w-10 overflow-hidden rounded-xl bg-primary-50 shadow-md ring-1 ring-primary-200/60 dark:bg-dark-800 dark:ring-primary-800/40">
-            <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-full w-full object-contain" />
+        <div class="flex items-center">
+          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
+            <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
           </div>
-          <span class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">{{ siteName }}</span>
         </div>
 
         <!-- Nav Actions -->
@@ -411,6 +479,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { sanitizeUrl } from '@/utils/url'
 
 const { t } = useI18n()
 
@@ -418,11 +487,13 @@ const authStore = useAuthStore()
 const appStore = useAppStore()
 
 // Site settings - directly from appStore (already initialized from injected config)
-const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || '7tomAPI')
-const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '')
-const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || '7tomAPI Gateway Platform')
-const docUrl = computed(() => appStore.cachedPublicSettings?.doc_url || appStore.docUrl || '')
+const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
+const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
+const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'AI API Gateway Platform')
+const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const homeContent = computed(() => appStore.cachedPublicSettings?.home_content || '')
+const hasHomeContent = computed(() => homeContent.value.trim().length > 0)
+const compactHomeEnabled = computed(() => appStore.cachedPublicSettings?.compact_home_enabled === true)
 
 // Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
@@ -597,7 +668,7 @@ onMounted(() => {
   color: #a78bfa;
 }
 .code-url {
-  color: #22d3ee;
+  color: #14b8a6;
 }
 .code-comment {
   color: #64748b;
@@ -638,8 +709,8 @@ onMounted(() => {
 :deep(.dark) .terminal-window {
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(34, 211, 238, 0.2),
-    0 0 40px rgba(34, 211, 238, 0.1),
+    0 0 0 1px rgba(20, 184, 166, 0.2),
+    0 0 40px rgba(20, 184, 166, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 </style>

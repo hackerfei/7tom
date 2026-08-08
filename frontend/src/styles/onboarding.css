@@ -1,4 +1,4 @@
-/* 7tomAPI Interactive Tour Styles - DOM Restructured Version */
+/* Sub2API Interactive Tour Styles - DOM Restructured Version */
 
 /* 1. Overlay & Highlight */
 .driver-overlay {
@@ -196,11 +196,11 @@
 }
 
 .theme-tour-popover .driver-popover-next-btn {
-  background-color: #06b6d4 !important;
+  background-color: #14b8a6 !important;
   color: #ffffff !important;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
 }
-.theme-tour-popover .driver-popover-next-btn:hover { background-color: #0891b2 !important; }
+.theme-tour-popover .driver-popover-next-btn:hover { background-color: #0d9488 !important; }
 
 .theme-tour-popover .driver-popover-prev-btn {
   background-color: white !important;

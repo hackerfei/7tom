@@ -1,10 +1,7 @@
 // Package geminicli provides helpers for interacting with Gemini CLI tools.
 package geminicli
 
-import (
-	"os"
-	"time"
-)
+import "time"
 
 const (
 	AIStudioBaseURL  = "https://generativelanguage.googleapis.com"
@@ -38,11 +35,14 @@ const (
 	// GeminiCLIRedirectURI is the redirect URI used by Gemini CLI for Code Assist OAuth.
 	GeminiCLIRedirectURI = "https://codeassist.google.com/authcode"
 
-	// GeminiCLIOAuthClientIDEnv/GeminiCLIOAuthClientSecretEnv configure optional
-	// built-in Gemini CLI OAuth credentials. Do not hard-code OAuth credentials in
-	// source; inject them at runtime for local deployments that require this flow.
-	GeminiCLIOAuthClientIDEnv = "GEMINI_CLI_OAUTH_CLIENT_ID"
-	// GeminiCLIOAuthClientSecretEnv is the environment variable name for the built-in client secret.
+	// GeminiCLIOAuthClientID/Secret are optional compiled-in fallbacks.
+	// This fork does not embed Google's public Gemini CLI OAuth credentials
+	// (GitHub push protection). Provide them via env for built-in login.
+	GeminiCLIOAuthClientID     = ""
+	GeminiCLIOAuthClientSecret = ""
+
+	// GeminiCLIOAuthClientIDEnv/SecretEnv configure the built-in Gemini CLI OAuth client.
+	GeminiCLIOAuthClientIDEnv     = "GEMINI_CLI_OAUTH_CLIENT_ID"
 	GeminiCLIOAuthClientSecretEnv = "GEMINI_CLI_OAUTH_CLIENT_SECRET"
 
 	SessionTTL = 30 * time.Minute
@@ -50,11 +50,3 @@ const (
 	// GeminiCLIUserAgent mimics Gemini CLI to maximize compatibility with internal endpoints.
 	GeminiCLIUserAgent = "GeminiCLI/0.1.5 (Windows; AMD64)"
 )
-
-func GeminiCLIOAuthClientID() string {
-	return os.Getenv(GeminiCLIOAuthClientIDEnv)
-}
-
-func GeminiCLIOAuthClientSecret() string {
-	return os.Getenv(GeminiCLIOAuthClientSecretEnv)
-}
